@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, url_for, render_template, request
 from flask_autoindex import AutoIndex
-from flask_login import login_user, login_required, logout_user, LoginManager
+from flask_login import login_user, login_required, logout_user, LoginManager, current_user
 from werkzeug.utils import secure_filename
 
 load_dotenv()
@@ -26,8 +26,8 @@ files_index = AutoIndex(app, browse_root=os.path.abspath(UPLOAD_FOLDER), add_url
 
 
 class User:
-    def __init__(self, id):
-        self.name = id
+    def __init__(self, id, name):
+        self.name = name
         self.id = id
 
     def is_authenticated(self):
@@ -46,14 +46,20 @@ class User:
         return '<User %r>' % (self.name)
 
 
+users = {}
+for token in tokens:
+    users.update({token: User(token, tokens[token])})
+
+
 @login_manager.user_loader
 def load_user(token):
-    if token in tokens:
-        return User(tokens[token])
+    return users.get(token)
 
 
 @app.route("/", methods=["GET"])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('autoindex'))
     return render_template("login.html")
 
 
@@ -62,14 +68,15 @@ def login_post():
     token = request.form["nm"]
     user = load_user(token)
     if user:
-        login_user(user, remember=True)
+        login_user(user)
         return redirect(url_for("autoindex"))
     else:
         return redirect(url_for("login"))
 
 
-@app.route('/files')
-@app.route('/files/<path:path>')
+@app.route('/autoindex')
+@app.route('/autoindex/<path:path>')
+@login_required
 def autoindex(path='.'):
     return files_index.render_autoindex(path, template='autoindex.html', endpoint='.autoindex')
 
@@ -92,15 +99,15 @@ def upload():
     if request.method == 'POST':
         if 'file' not in request.files:
             flash('No file part')
-            return redirect("/files")
+            return redirect("/autoindex")
         file = request.files['file']
         if file.filename == '':
             flash('No selected file')
-            return redirect("/files")
+            return redirect("/autoindex")
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect("/files")
+            return redirect("/autoindex")
     return '''
             <!doctype html>
             <title>Загрузка нового файла</title>
