@@ -1,0 +1,14 @@
+{% extends '__autoindex__/autoindex.html' %}
+{% block meta %}
+  {{ super() }}
+{% endblock %}
+
+{% block header %}
+  <div style="width: 70%; margin: 30px auto;">
+    <h2>Просмотрщик файлов</h2>
+    <div style="width: 20%; float: right; margin: 30px"><b><a href="/upload">Загрузить файл</a></b> | <b><a href="/logout">Logout</a></b></div>
+{% endblock %}
+
+{% block footer %}
+  </div>
+{% endblock %}
